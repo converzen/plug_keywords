@@ -25,10 +25,11 @@ echo "1. Testing initialize with experimental.configure..."
     "capabilities": {
       "experimental": {
         "configure": {
-          "plugin_name" : "zeno", 
+          "plugin_name" : "plug_keywords",
           "plugin_path":"./target/release",
           "plugin_config": {
-	    "directory_path" : "./plugins/zeno/data/database.yaml"
+            "function_description" : "Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts.",
+	          "database_path" : "./data/database.yaml"
           }
         }
       }
@@ -52,7 +53,7 @@ EOF
     "id": 3,
     "method": "tools/call",
     "params": {
-      "name": "zeno_get_product_morsel",
+      "name": "keywords_to_morsel",
       "arguments": {
         "keywords": "Written encryptn"
       }

@@ -1,9 +1,0 @@
-[2m2026-02-10T09:27:55.477468Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Starting MCP STDIO Server
-[2m2026-02-10T09:27:55.477544Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Worker threads: 8
-[2m2026-02-10T09:27:55.479718Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Initialize from client: test-client v1.0.0
-[2m2026-02-10T09:27:55.479806Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Loading configuration from initialize.experimental.configure
-[2m2026-02-10T09:27:55.479896Z[0m [33m WARN[0m [2mframework_core::plugin::loader[0m[2m:[0m Could not find plugin: zeno
-[2m2026-02-10T09:27:55.479922Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Loaded 0 plugins with 0 tools from experimental.configure
-[2m2026-02-10T09:27:55.800627Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Reader task exiting
-[2m2026-02-10T09:27:55.800839Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Reader task completed
-[2m2026-02-10T09:27:55.800920Z[0m [32m INFO[0m [2mmcp_server_stdio[0m[2m:[0m Shutting down
