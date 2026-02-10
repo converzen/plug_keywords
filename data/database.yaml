@@ -1,0 +1,20 @@
+- id: security_overview
+  keywords: [ security, encryption, safe, protected, protocol ]
+  link: /security
+  content: |
+    We take a security-first approach. All chat data is encrypted at rest using AES-256 and in transit via TLS 1.3. Our 
+    Rust backend is memory-safe by design, eliminating common vulnerabilities like buffer overflows.
+
+- id: gdpr_compliance
+  keywords: [ gdpr, privacy, data, europe, compliance, dpa ]
+  link: /privacy
+  content: |
+    Zeno is fully GDPR compliant. We offer data residency options and a self-service dashboard for Data Processing 
+    Agreements (DPA). Users can request data deletion or exports at any time through the admin site.
+
+- id: data_retention
+  keywords: [ retention, storage, history, delete, logs ]
+  link: /docs/retention
+  content: |
+    By default, chat history is stored for 30 days to power RAG features, but this is fully configurable in your 
+    admin settings. You can set custom retention policies or trigger immediate purging via our API.
