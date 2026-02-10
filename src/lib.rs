@@ -14,9 +14,8 @@ use std::path::PathBuf;
 use std::sync::RwLock;
 
 mod async_tasks;
-use async_tasks::run_async_tasks;
+use async_tasks::{run_async_tasks, Trigrams};
 
-use plugin_utils::Trigrams;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DbMorsel {
     pub id: String,

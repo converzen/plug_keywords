@@ -340,20 +340,11 @@ dependencies = [
  "log",
  "mcp-plugin-api",
  "once_cell",
- "plugin_utils",
  "schemars",
  "serde",
  "serde_json",
  "serde_yaml",
  "tokio",
-]
-
-[[package]]
-name = "plugin_utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
 ]
 
 [[package]]

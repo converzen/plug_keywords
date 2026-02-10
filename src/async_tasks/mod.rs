@@ -6,6 +6,8 @@
 use crate::{get_config, PluginConfig};
 use anyhow::anyhow;
 
+mod trigrams;
+pub use trigrams::*;
 mod morsels;
 // use directory::init_directory;
 use crate::async_tasks::morsels::{init_failed_keywords, init_morsels};

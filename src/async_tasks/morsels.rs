@@ -1,7 +1,7 @@
 use crate::{FailLogEntry, PluginConfig, FAILED_KEYWORDS, MORSEL_TRIGRAMS};
 use anyhow::anyhow;
 use log::{debug, error, warn};
-use plugin_utils::{Named, Trigrams};
+use super::trigrams::{Named, Trigrams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
