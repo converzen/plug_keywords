@@ -58,6 +58,8 @@ static FAILED_KEYWORDS: Lazy<RwLock<Option<HashMap<String, FailLogEntry>>>> =
 /// Plugin configuration structure
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct PluginConfig {
+    /// Function description for 'keywords_to_morsel' tool
+    function_description: String,
     /// Path to Directory File
     database_path: PathBuf,
     /// Path to failed keyword log
@@ -279,7 +281,11 @@ pub fn log_failed_keywords(keywords: &[String], config: &PluginConfig) {
 // Async handlers are wrapped with wrap_async_handler!
 declare_tools! {
     tools: [
-        Tool::builder("keywords_to_morsel", "Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts. This tool is faster and more accurate than a general knowledge base search for direct user inquiries. Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr').")
+        Tool::builder("keywords_to_morsel",
+r#"Use this tool to retrieve verified, high-priority information about specific product
+ topics including pricing, security, technical stack, and feature shortcuts. This tool
+ is faster and more accurate than a general knowledge base search for direct user inquiries.
+ Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr')."#)
             .param_string("keywords", "Comma separated list of keywords", true)
             .handler(handle_get_morsel),
     ]
