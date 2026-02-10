@@ -1,4 +1,4 @@
-//! Zeno plugin. Provide information for Zeno, the ConverZen Expert
+//! keywords plugin. Find information for agents via fuzzy keyword search
 
 use fs2::FileExt;
 //
@@ -279,7 +279,7 @@ pub fn log_failed_keywords(keywords: &[String], config: &PluginConfig) {
 // Async handlers are wrapped with wrap_async_handler!
 declare_tools! {
     tools: [
-        Tool::builder("zeno_keywords_to_morsel", "Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts. This tool is faster and more accurate than a general knowledge base search for direct user inquiries. Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr').")
+        Tool::builder("keywords_to_morsel", "Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts. This tool is faster and more accurate than a general knowledge base search for direct user inquiries. Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr').")
             .param_string("keywords", "Comma separated list of keywords", true)
             .handler(handle_get_morsel),
     ]
