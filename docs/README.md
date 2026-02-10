@@ -32,7 +32,7 @@ It has been changed from a static text to a dynamic configuration parameter
 It should reflect the purpose of this database. The plugin was originally 
 developed for *Zeno* - *ConverZen*'s Expert Chat, which uses the following function description:  
 
-```rust
+```
 "Use this tool to retrieve verified, high-priority information about specific product \
 topics including pricing, security, technical stack, and feature shortcuts. This tool is \
 faster and more accurate than a general knowledge base search for direct user inquiries. \
