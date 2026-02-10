@@ -15,7 +15,7 @@ The keyword search uses a [trigram search](https://en.wikipedia.org/wiki/Trigram
 and generates a score for each keyword rather than an exact match.
 
 ### Analytics
-"Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts. This tool is faster and more accurate than a general knowledge base search for direct user inquiries. Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr')."
+
 The plugin optionally logs unmatched keywords to a failed keywords output file in json format.
 This allows you to monitor the keywords that fail to produce valid results and improve your database.
 
