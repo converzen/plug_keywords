@@ -279,9 +279,25 @@ pub fn log_failed_keywords(keywords: &[String], config: &PluginConfig) {
 
 // Declare tools using the standard macro
 // Async handlers are wrapped with wrap_async_handler!
+
+// When the MCP server is called with --get-plugin-schema it retrieves
+// the tool list before the plugin is configured so get_config will fail
+// dramatically so we we need to use try_get_config() and supply a default
+// for the function desription
+
+fn  get_tool_description<'a>() -> &'a str {
+    match try_get_config() {
+        Some(config) => config.function_description.as_str(),
+        None => {
+            warn!("try_get_config is not yet configured");
+            "not configured yet - will be set after configuration"
+        }
+    }
+}
+
 declare_tools! {
     tools: [
-        Tool::builder("keywords_to_morsel",get_config().function_description.as_str())
+        Tool::builder("keywords_to_morsel",get_tool_description())
             .param_string("keywords", "Comma separated list of keywords", true)
             .handler(handle_get_morsel),
     ]
