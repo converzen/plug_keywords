@@ -124,6 +124,7 @@ make it to the result list.
 **Sample configuration:** 
 ```json
 {
+  "function_description" : "Use this tool to retrieve verified, high-priority information about specific product topics including pricing, security, technical stack, and feature shortcuts.",
   "database_path": "./data/database.yaml",
   "failed_keywords_path": "./data/failed_keywords.log",
   "morsel_n_best": 2,
