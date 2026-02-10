@@ -23,9 +23,14 @@ This allows you to monitor the keywords that fail to produce valid results and i
 The plugin logs to stderr using env-logger. Logging is controlled through the ```RUST_LOG``` env
 variable that can be set for the MCP instance in the *ConverZen* admin interface.
 
-### TODO's
-The plugin was developed for Zeno, *ConverZen*'s Expert persona. The plugin function description
-still reflects that and gives a Zeno-specific context:
+### Function Description
+The plugin function description for `keywords_to_morsel` gives the LLM information about what this function can be 
+used for. 
+It has been changed from a static text to a dynamic configuration parameter 
+`function_description` in the plugin configuration. 
+
+It should reflect the purpose of this database. The plugin was originally 
+developed for *Zeno* - *ConverZen*'s Expert Chat, which uses the following function description:  
 
 ```rust
 "Use this tool to retrieve verified, high-priority information about specific product \
@@ -33,8 +38,6 @@ topics including pricing, security, technical stack, and feature shortcuts. This
 faster and more accurate than a general knowledge base search for direct user inquiries. \
 Input should be 1-2 core keywords (e.g., 'pricing', 'encryption', 'gdpr')."
 ```
-
-This should be made to be adaptable using config options.  
 
 ### Future Extension
 
@@ -107,6 +110,7 @@ Sample database file:
 ## Configuration
 
 The following configuration items are supported: 
+- **function_description:** *Required*. Function description for 'keywords_to_morsel' tool.
 - **database_path:** *Required*. Path to a database/yaml file. Must be relative to the chat_server base 
 directory.  
 - **failed_keywords_path:** Path to a file that will contain information about failed 
