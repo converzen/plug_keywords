@@ -20,7 +20,8 @@ use async_tasks::{run_async_tasks, Trigrams};
 pub struct DbMorsel {
     pub id: String,
     pub content: String,
-    pub link: Option<String>,
+    #[serde(default)]
+    pub links: Vec<String>,
     pub score: f32, // Useful for the LLM to see confidence
 }
 
@@ -159,7 +160,7 @@ fn handle_get_morsel(args: &Value) -> Result<Value, String> {
             morsels.push(DbMorsel {
                 id: item.id.clone(),
                 content: item.content.clone(),
-                link: item.link.clone(),
+                links: item.links.clone(),
                 score: m.score as f32,
             });
         });

@@ -9,7 +9,6 @@ use anyhow::anyhow;
 mod trigrams;
 pub use trigrams::*;
 mod morsels;
-// use directory::init_directory;
 use crate::async_tasks::morsels::{init_failed_keywords, init_morsels};
 use log::{debug, error, info};
 pub use morsels::MorselEntry;
@@ -28,7 +27,7 @@ pub fn run_async_tasks() -> anyhow::Result<()> {
     debug!("starting async worker");
     std::thread::spawn::<_, Result<(), String>>(move || {
         debug!("starting async runtime");
-        let runtime = match tokio::runtime::Builder::new_current_thread()
+        let runtime = match tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
         {

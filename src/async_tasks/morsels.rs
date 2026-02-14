@@ -14,7 +14,8 @@ pub struct MorselEntry {
     pub id: String,
     pub keywords: Vec<String>,
     pub content: String,
-    pub link: Option<String>,
+    #[serde(default)]
+    pub links: Vec<String>,
 }
 
 impl Named for MorselEntry {
@@ -34,6 +35,14 @@ pub async fn init_morsels(config: &PluginConfig) -> anyhow::Result<()> {
         debug!("init_directory: bytes read:   {bytes_read}");
         let entries: Vec<MorselEntry> = serde_yaml::from_str(buffer.as_str())?;
         debug!("init_directory: parsed {} entries", entries.len());
+        entries.iter().enumerate().for_each(|(idx,morsel)| {
+            debug!("morsel {idx}: id: {} keywords: {:?} links: {} , content_len: {}",
+                morsel.id,
+                morsel.keywords,
+                morsel.links.len(),
+                morsel.content.len());
+        });
+
         let trigrams = Trigrams::new(entries)?;
         debug!("init_directory: trigrams");
         let mut tgms = MORSEL_TRIGRAMS
