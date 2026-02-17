@@ -3,7 +3,7 @@
 //! This module provides a global, thread-safe Tokio runtime that is
 //! created once and reused for all async operations in the plugin.
 
-use crate::{get_config, PluginConfig};
+use crate::{PluginConfig, get_config};
 use anyhow::anyhow;
 
 mod trigrams;
@@ -11,9 +11,12 @@ pub use trigrams::*;
 mod morsels;
 use crate::async_tasks::morsels::{init_failed_keywords, init_morsels};
 use log::{debug, error, info};
-pub use morsels::MorselEntry;
+pub use morsels::{MorselEntry, MorselResult};
 use std::sync::mpsc;
 use std::time::Duration;
+
+mod directory;
+pub use directory::*;
 
 enum InitResult {
     Success,
@@ -56,7 +59,7 @@ pub fn run_async_tasks() -> anyhow::Result<()> {
         // should run forever
         debug!(
             "starting update loop with update interval {}s",
-            config.update_interval_secs.unwrap()
+            config.update_interval_secs
         );
         let res = runtime
             .block_on(update_loop(&config))
@@ -76,19 +79,21 @@ pub fn run_async_tasks() -> anyhow::Result<()> {
 
 async fn initialize_data() -> anyhow::Result<()> {
     let config = get_config();
-    init_morsels(config).await?;
+    let results = tokio::join!(
+        init_morsels(config),
+        init_directory(config),
+        init_failed_keywords(config)
+    );
     // tolerate this failure
-    let _ = init_failed_keywords(config).await;
+    let _ = results.0.map_err(|e| anyhow!(e.to_string()))?;
+    let _ = results.1.map_err(|e| anyhow!(e.to_string()))?;
     Ok(())
 }
 
 async fn update_loop(config: &PluginConfig) -> anyhow::Result<()> {
-    if config.update_interval_secs.unwrap() > 0 {
+    if config.update_interval_secs > 0 {
         loop {
-            tokio::time::sleep(Duration::from_secs(
-                config.update_interval_secs.unwrap() as u64
-            ))
-            .await;
+            tokio::time::sleep(Duration::from_secs(config.update_interval_secs as u64)).await;
             match initialize_data().await {
                 Ok(()) => {
                     info!("update loop load data successfully");

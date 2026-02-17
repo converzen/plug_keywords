@@ -35,29 +35,32 @@ impl<T: Named + Clone + Serialize + Debug> Trigrams<T> {
         })
     }
 
-    pub fn search(&self, str: &str, n_first: usize, min_score: f64) -> Vec<Match<T>> {
-        let cmp = trigrams(str);
-        let mut non_zero_matches = if min_score > 0.0 {
-            self.trigrams
-                .iter()
-                .map(|(name, trigrams)| (name, trigram_similarity(trigrams, &cmp)))
-                .filter(|(_name, score)| *score >= min_score)
-                .collect::<Vec<_>>()
-        } else {
-            // returning zero score results makes no sense
-            self.trigrams
-                .iter()
-                .map(|(name, trigrams)| (name, trigram_similarity(trigrams, &cmp)))
-                .filter(|(_name, score)| *score > min_score)
-                .collect::<Vec<_>>()
-        };
+    pub fn search_many(
+        &self,
+        keywords: &[&str],
+        n_first: usize,
+        min_score: f64,
+        failed: &mut Option<Vec<String>>,
+    ) -> Vec<Match<T>> {
+        let mut matches = keywords
+            .iter()
+            .flat_map(|keyword| {
+                let matches = self.match_one(keyword, min_score);
+                if matches.is_empty()
+                    && let Some(failed) = failed.as_mut()
+                {
+                    failed.push(keyword.to_string());
+                }
+                matches
+            })
+            .collect::<Vec<_>>();
 
-        non_zero_matches.sort_by(|a, b| {
+        matches.sort_by(|a, b| {
             // reverse sort order, sort descending
             b.1.partial_cmp(&a.1).unwrap()
         });
 
-        non_zero_matches
+        matches
             .into_iter()
             .take(n_first)
             .map(|(name, score)| Match {
@@ -69,6 +72,37 @@ impl<T: Named + Clone + Serialize + Debug> Trigrams<T> {
                 score,
             })
             .collect()
+    }
+
+    #[allow(dead_code)]
+    pub fn search_one(&self, keyword: &str, n_first: usize, min_score: f64) -> Vec<Match<T>> {
+        let mut matches = self.match_one(keyword, min_score);
+
+        matches.sort_by(|a, b| {
+            // reverse sort order, sort descending
+            b.1.partial_cmp(&a.1).unwrap()
+        });
+
+        matches
+            .into_iter()
+            .take(n_first)
+            .map(|(name, score)| Match {
+                item: self
+                    .item_map
+                    .get(name.as_str())
+                    .expect("name should exist in hashmap")
+                    .clone(),
+                score,
+            })
+            .collect()
+    }
+    fn match_one(&self, str: &str, min_score: f64) -> Vec<(&String, f64)> {
+        let cmp = trigrams(str);
+        self.trigrams
+            .iter()
+            .map(|(name, trigrams)| (name, trigram_similarity(trigrams, &cmp)))
+            .filter(|(_name, score)| *score >= min_score)
+            .collect::<Vec<_>>()
     }
 }
 

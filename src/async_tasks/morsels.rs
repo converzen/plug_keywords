@@ -1,7 +1,7 @@
-use crate::{FailLogEntry, PluginConfig, FAILED_KEYWORDS, MORSEL_TRIGRAMS};
+use super::trigrams::{Named, Trigrams};
+use crate::{FAILED_KEYWORDS, FailLogEntry, MORSEL_TRIGRAMS, PluginConfig};
 use anyhow::anyhow;
 use log::{debug, error, warn};
-use super::trigrams::{Named, Trigrams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -24,43 +24,60 @@ impl Named for MorselEntry {
     }
 }
 
-pub async fn init_morsels(config: &PluginConfig) -> anyhow::Result<()> {
-    debug!("init_directory: config: {config:?}");
-    let db_path = config.database_path.as_path();
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MorselResult {
+    pub id: String,
+    pub content: String,
+    #[serde(default)]
+    pub links: Vec<String>,
+    pub score: f32, // Useful for the LLM to see confidence
+}
+
+pub async fn init_morsels(config: &PluginConfig) -> anyhow::Result<bool> {
+    debug!("init_morsels: config: {config:?}");
+    let kwd_config = if let Some(kwd_config) = &config.keywords {
+        kwd_config
+    } else {
+        return Ok(false);
+    };
+
+    let db_path = kwd_config.db_path.as_path();
     if db_path.exists() && db_path.is_file() {
-        debug!("init_directory: file exists:  {:?}", config.database_path);
+        debug!("init_morsels: file exists:  {:?}", kwd_config.db_path);
         let mut db_file = File::open(db_path).await?;
         let mut buffer = String::new();
         let bytes_read = db_file.read_to_string(&mut buffer).await?;
-        debug!("init_directory: bytes read:   {bytes_read}");
+        debug!("init_morsels: bytes read:   {bytes_read}");
         let entries: Vec<MorselEntry> = serde_yaml::from_str(buffer.as_str())?;
-        debug!("init_directory: parsed {} entries", entries.len());
-        entries.iter().enumerate().for_each(|(idx,morsel)| {
-            debug!("morsel {idx}: id: {} keywords: {:?} links: {} , content_len: {}",
+        debug!("init_morsels: parsed {} entries", entries.len());
+        entries.iter().enumerate().for_each(|(idx, morsel)| {
+            debug!(
+                "morsel {idx}: id: {} keywords: {:?} links: {} , content_len: {}",
                 morsel.id,
                 morsel.keywords,
                 morsel.links.len(),
-                morsel.content.len());
+                morsel.content.len()
+            );
         });
 
         let trigrams = Trigrams::new(entries)?;
-        debug!("init_directory: trigrams");
+        debug!("init_morsels: trigrams");
         let mut tgms = MORSEL_TRIGRAMS
             .write()
             .map_err(|e| anyhow!(e.to_string()))?;
         *tgms = Some(trigrams);
-        Ok(())
+        Ok(true)
     } else {
         let database_path = match std::env::current_dir() {
             Ok(path) => path
-                .join(config.database_path.as_os_str())
+                .join(kwd_config.db_path.as_os_str())
                 .display()
                 .to_string(),
             Err(e) => format!("NO PWD: {e:?}"),
         };
         let message = format!(
-            "init_directory: database path does not exist or is not a file: {} -> {}",
-            config.database_path.display(),
+            "init_morsels: database path does not exist or is not a file: {} -> {}",
+            kwd_config.db_path.display(),
             database_path
         );
 
@@ -90,7 +107,7 @@ pub async fn init_failed_keywords(config: &PluginConfig) -> anyhow::Result<()> {
             Ok(log_file) => log_file,
             Err(_e) => {
                 let log_path = match std::env::current_dir() {
-                    Ok(path) => path.join(path.as_os_str()).display().to_string(),
+                    Ok(pwd) => pwd.join(path.as_os_str()).display().to_string(),
                     Err(e) => format!("NO PWD: {e:?}"),
                 };
                 warn!("log_failed_keywords: log_path can not be opened: {log_path}");
@@ -115,7 +132,7 @@ pub async fn init_failed_keywords(config: &PluginConfig) -> anyhow::Result<()> {
         };
         let mut kwd_map = HashMap::new();
         entries.into_iter().for_each(|entry| {
-            kwd_map.insert(entry.keyword.clone(), entry);
+            kwd_map.insert((entry.keyword.clone(), entry.kw_type.to_string()), entry);
         });
 
         let mut kwd_store = FAILED_KEYWORDS
