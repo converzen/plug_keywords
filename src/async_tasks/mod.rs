@@ -5,6 +5,7 @@
 
 use crate::{PluginConfig, get_config};
 use anyhow::anyhow;
+use std::path::{Path, PathBuf};
 
 mod trigrams;
 pub use trigrams::*;
@@ -24,7 +25,7 @@ enum InitResult {
 }
 
 pub fn run_async_tasks() -> anyhow::Result<()> {
-    info!("MCP plugin gmc-v2 starting async initialization");
+    info!("ConverZen MCP plugin keywords starting async initialization");
     let (tx, rx) = mpsc::channel();
     let config = get_config().clone();
     debug!("starting async worker");
@@ -85,9 +86,34 @@ async fn initialize_data() -> anyhow::Result<()> {
         init_failed_keywords(config)
     );
     // tolerate this failure
-    let _ = results.0.map_err(|e| anyhow!(e.to_string()))?;
-    let _ = results.1.map_err(|e| anyhow!(e.to_string()))?;
-    Ok(())
+    let mut func_count = 0;
+    func_count += match results.0 {
+        Ok(success) => {
+            if success {
+                1
+            } else {
+                0
+            }
+        }
+        Err(e) => return Err(anyhow!("Failed to initialize morsels: {e}")),
+    };
+
+    func_count += match results.1 {
+        Ok(success) => {
+            if success {
+                1
+            } else {
+                0
+            }
+        }
+        Err(e) => return Err(anyhow!("Failed to initialize directory: {e}")),
+    };
+
+    if func_count > 0 {
+        Ok(())
+    } else {
+        Err(anyhow!("Failed to initialize any async functions"))
+    }
 }
 
 async fn update_loop(config: &PluginConfig) -> anyhow::Result<()> {
@@ -106,4 +132,26 @@ async fn update_loop(config: &PluginConfig) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn validate_path<T: AsRef<Path>>(path: T, is_file: bool) -> anyhow::Result<PathBuf> {
+    let path = path.as_ref();
+    let is_type = |f: &Path| -> bool { if is_file { f.is_file() } else { f.is_dir() } };
+
+    Ok(if path.exists() && is_type(path) {
+        PathBuf::from(path)
+    } else {
+        if path.is_absolute() {
+            return Err(anyhow!("init_morsels: db_path is not a file: {:?}", path));
+        } else {
+            let pwd = std::env::current_dir()?;
+            let pb = pwd.join(path);
+            let path = pb.as_path();
+            if path.exists() && is_type(path) {
+                PathBuf::from(path)
+            } else {
+                return Err(anyhow!("init_morsels: db_path is not a file: {:?}", path));
+            }
+        }
+    })
 }

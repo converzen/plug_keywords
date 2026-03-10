@@ -22,4 +22,7 @@ fs2 = "0.4.3"
 mcp-plugin-api = "0.2"
 # mcp-plugin-api = { path = "../../mcp-plugin-api" }
 reqwest = { version = "0.13.2", features = ["json"] }
+url = "2.5.8"
 
+[build-dependencies]
+chrono = "0.4.43"

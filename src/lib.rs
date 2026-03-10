@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 mod async_tasks;
 use async_tasks::{Trigrams, run_async_tasks};
@@ -50,8 +50,7 @@ pub struct FailLogEntry {
     timestamp: String,
 }
 
-static DIRECTORY_TRIGRAMS: Lazy<RwLock<Option<Trigrams<DirectoryEntry>>>> =
-    Lazy::new(|| RwLock::new(None));
+static DIRECTORY_INFO: Lazy<RwLock<Option<Arc<DirectoryInfo>>>> = Lazy::new(|| RwLock::new(None));
 
 static MORSEL_TRIGRAMS: Lazy<RwLock<Option<Trigrams<MorselEntry>>>> =
     Lazy::new(|| RwLock::new(None));
@@ -64,6 +63,9 @@ static FAILED_KEYWORDS: Lazy<RwLock<Option<HashMap<(String, String), FailLogEntr
 // ============================================================================
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct KeywordsConfig {
+    /// set to false to deactivate
+    #[serde(default = "active")]
+    active: bool,
     /// Function description for 'keywords_to_morsel' tool
     function_descr: String,
     /// Path to Directory File
@@ -86,7 +88,10 @@ pub enum DirectorySource {
 }
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct DirectoryConfig {
-    /// Function description for 'keywords_to_morsel' tool
+    /// set to false to deactivate
+    #[serde(default = "active")]
+    active: bool,
+    /// Function description for directory tool
     function_descr: String,
     /// Path to Directory File
     source: DirectorySource,
@@ -122,6 +127,9 @@ fn min_score() -> f64 {
     0.2
 }
 
+fn active() -> bool {
+    true
+}
 fn default_update_interval_secs() -> u32 {
     3600
 }
@@ -129,7 +137,7 @@ fn default_update_interval_secs() -> u32 {
 // Generate all configuration boilerplate with one macro!
 declare_plugin_config!(PluginConfig);
 
-use crate::async_tasks::{DirectoryEntry, LinkResult, MorselEntry, MorselResult};
+use crate::async_tasks::{DirectoryInfo, LinkResult, MorselEntry, MorselResult};
 use env_logger::{Builder, Target};
 use log::{debug, error, info, warn};
 
@@ -137,7 +145,11 @@ fn init() -> Result<(), String> {
     let mut builder = Builder::from_default_env();
     builder.target(Target::Stderr);
     builder.init();
-    info!("initializing keywords MCP plugin",);
+    info!("Initializing ConverZen keywords MCP plugin");
+    let version = env!("CARGO_PKG_VERSION");
+    let git_hash = env!("GIT_HASH");
+    let build_ts = env!("BUILD_TIMESTAMP");
+    info!("version {version}, Rev. {git_hash}, build-ts: {build_ts}");
     run_async_tasks().map_err(|e| e.to_string())
 }
 
@@ -150,10 +162,19 @@ fn handle_get_link(args: &Value) -> Result<Value, String> {
     debug!("keywords_to_link called with args: {args:?}");
     let config = get_config();
     let dir_config = if let Some(dir_config) = &config.directory {
+        if !dir_config.active {
+            return Err(String::from("keywords_to_link is deactivated"));
+        }
         dir_config
     } else {
-        return Err(String::from("keywords_to_morsel is not configured"));
+        return Err(String::from("keywords_to_link is not configured"));
     };
+
+    let directory_info = DIRECTORY_INFO
+        .read()
+        .map_err(|e| format!("cannot read directory entries: {e}"))?
+        .clone()
+        .ok_or("Directory data is not initialized")?;
 
     let keywords = args["keywords"]
         .as_str()
@@ -171,33 +192,33 @@ fn handle_get_link(args: &Value) -> Result<Value, String> {
         None
     };
 
-    let matches = DIRECTORY_TRIGRAMS
-        .read()
-        .map_err(|e| format!("cannot read directory entries: {e}"))?
-        .as_ref()
-        .ok_or("Directory data is not initialized")?
-        .search_many(
-            &keywords,
-            dir_config.n_best,
-            dir_config.min_score,
-            &mut failed_keywords,
-        );
+    let matches = directory_info.trigrams.search_many(
+        &keywords,
+        dir_config.n_best,
+        dir_config.min_score,
+        &mut failed_keywords,
+    );
 
     if let Some(failed_keywords) = failed_keywords {
         log_failed_keywords(&failed_keywords, config, "directory");
     }
 
+    // .join() handles the leading slash in "/here" automatically
     let md_content = if !matches.is_empty() {
         let mut links = Vec::with_capacity(matches.len());
-        matches.into_iter().for_each(|dir_match| {
+        for dir_match in matches {
             let item = dir_match.item;
             links.push(LinkResult {
-                url_path: item.path,
+                url: directory_info
+                    .origin
+                    .join(item.path.as_str())
+                    .map_err(|e| e.to_string())?
+                    .to_string(),
                 title: item.title,
                 score: dir_match.score as f32,
                 description: item.description,
             });
-        });
+        }
         LinkResponse::Success {
             results_count: links.len(),
             links,
@@ -222,6 +243,9 @@ fn handle_get_morsel(args: &Value) -> Result<Value, String> {
     debug!("keywords_to_morsel called with args: {args:?}");
     let config = get_config();
     let kwd_config = if let Some(kwd_config) = &config.keywords {
+        if !kwd_config.active {
+            return Err(String::from("keywords_to_morsel is deactivated"));
+        }
         kwd_config
     } else {
         return Err(String::from("keywords_to_morsel is not configured"));
@@ -323,9 +347,10 @@ pub fn log_failed_keywords(keywords: &[String], config: &PluginConfig, kw_type: 
             error!("cannot access failed keywords: {e}");
         }
     }
-    if let Some(path) = &config.failed_keywords_path
-        && updated
-    {
+    if let Some(path) = &config.failed_keywords_path {
+        if !updated {
+            return;
+        }
         let mut file = match OpenOptions::new()
             .read(true) // Required for Windows locking
             .write(true) // Atomic pointer positioning
@@ -400,7 +425,7 @@ declare_tools! {
         (|| match try_get_config() {
         Some(config) => {
             if let Some(kwd_cfg) = &config.keywords {
-                Tool::builder("keywords_to_morsel",kwd_cfg.function_descr.as_str(), true)
+                Tool::builder("keywords_to_morsel",kwd_cfg.function_descr.as_str(), kwd_cfg.active)
                     .param_string("keywords", "Comma separated list of keywords", true)
                     .handler(handle_get_morsel)
             } else {
@@ -417,7 +442,7 @@ declare_tools! {
         (|| match try_get_config() {
         Some(config) => {
             if let Some(dir_cfg) = &config.directory {
-                Tool::builder("keywords_to_link",dir_cfg.function_descr.as_str(), true)
+                Tool::builder("keywords_to_link",dir_cfg.function_descr.as_str(), dir_cfg.active)
                     .param_string("keywords", "Comma separated list of keywords", true)
                     .handler(handle_get_link)
             } else {

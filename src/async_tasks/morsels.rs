@@ -1,4 +1,5 @@
 use super::trigrams::{Named, Trigrams};
+use crate::async_tasks::validate_path;
 use crate::{FAILED_KEYWORDS, FailLogEntry, MORSEL_TRIGRAMS, PluginConfig};
 use anyhow::anyhow;
 use log::{debug, error, warn};
@@ -6,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::BufReader;
+
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
@@ -36,54 +38,41 @@ pub struct MorselResult {
 pub async fn init_morsels(config: &PluginConfig) -> anyhow::Result<bool> {
     debug!("init_morsels: config: {config:?}");
     let kwd_config = if let Some(kwd_config) = &config.keywords {
-        kwd_config
+        if kwd_config.active {
+            kwd_config
+        } else {
+            return Ok(false);
+        }
     } else {
         return Ok(false);
     };
 
-    let db_path = kwd_config.db_path.as_path();
-    if db_path.exists() && db_path.is_file() {
-        debug!("init_morsels: file exists:  {:?}", kwd_config.db_path);
-        let mut db_file = File::open(db_path).await?;
-        let mut buffer = String::new();
-        let bytes_read = db_file.read_to_string(&mut buffer).await?;
-        debug!("init_morsels: bytes read:   {bytes_read}");
-        let entries: Vec<MorselEntry> = serde_yaml::from_str(buffer.as_str())?;
-        debug!("init_morsels: parsed {} entries", entries.len());
-        entries.iter().enumerate().for_each(|(idx, morsel)| {
-            debug!(
-                "morsel {idx}: id: {} keywords: {:?} links: {} , content_len: {}",
-                morsel.id,
-                morsel.keywords,
-                morsel.links.len(),
-                morsel.content.len()
-            );
-        });
+    let db_path = validate_path(&kwd_config.db_path, true)?;
 
-        let trigrams = Trigrams::new(entries)?;
-        debug!("init_morsels: trigrams");
-        let mut tgms = MORSEL_TRIGRAMS
-            .write()
-            .map_err(|e| anyhow!(e.to_string()))?;
-        *tgms = Some(trigrams);
-        Ok(true)
-    } else {
-        let database_path = match std::env::current_dir() {
-            Ok(path) => path
-                .join(kwd_config.db_path.as_os_str())
-                .display()
-                .to_string(),
-            Err(e) => format!("NO PWD: {e:?}"),
-        };
-        let message = format!(
-            "init_morsels: database path does not exist or is not a file: {} -> {}",
-            kwd_config.db_path.display(),
-            database_path
+    debug!("init_morsels: file exists:  {:?}", kwd_config.db_path);
+    let mut db_file = File::open(db_path).await?;
+    let mut buffer = String::new();
+    let bytes_read = db_file.read_to_string(&mut buffer).await?;
+    debug!("init_morsels: bytes read:   {bytes_read}");
+    let entries: Vec<MorselEntry> = serde_yaml::from_str(buffer.as_str())?;
+    debug!("init_morsels: parsed {} entries", entries.len());
+    entries.iter().enumerate().for_each(|(idx, morsel)| {
+        debug!(
+            "morsel {idx}: id: {} keywords: {:?} links: {} , content_len: {}",
+            morsel.id,
+            morsel.keywords,
+            morsel.links.len(),
+            morsel.content.len()
         );
+    });
 
-        error!("{}", message.as_str());
-        Err(anyhow!(message))
-    }
+    let trigrams = Trigrams::new(entries)?;
+    debug!("init_morsels: trigrams");
+    let mut tgms = MORSEL_TRIGRAMS
+        .write()
+        .map_err(|e| anyhow!(e.to_string()))?;
+    *tgms = Some(trigrams);
+    Ok(true)
 }
 
 pub async fn init_failed_keywords(config: &PluginConfig) -> anyhow::Result<()> {
@@ -120,16 +109,21 @@ pub async fn init_failed_keywords(config: &PluginConfig) -> anyhow::Result<()> {
             }
         };
 
-        let reader = BufReader::new(log_file);
-        let entries: Vec<FailLogEntry> = match serde_json::from_reader(reader) {
-            Ok(entries) => entries,
-            Err(e) => {
-                error!("log_failed_keywords: failed to parse log file: {e}");
-                return Err(anyhow!(
-                    "log_failed_keywords: failed to parse log file: {e}"
-                ));
+        let entries: Vec<FailLogEntry> = if log_file.metadata()?.len() > 0 {
+            let reader = BufReader::new(log_file);
+            match serde_json::from_reader(reader) {
+                Ok(entries) => entries,
+                Err(e) => {
+                    error!("log_failed_keywords: failed to parse log file: {e}");
+                    return Err(anyhow!(
+                        "log_failed_keywords: failed to parse log file: {e}"
+                    ));
+                }
             }
+        } else {
+            vec![]
         };
+
         let mut kwd_map = HashMap::new();
         entries.into_iter().for_each(|entry| {
             kwd_map.insert((entry.keyword.clone(), entry.kw_type.to_string()), entry);
