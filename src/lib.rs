@@ -25,7 +25,8 @@ pub enum MorselResponse {
     },
     NoMatch {
         searched_keywords: Vec<String>,
-        suggestion: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        suggestion: Option<String>,
     },
 }
 
@@ -38,7 +39,8 @@ pub enum LinkResponse {
     },
     NoMatch {
         searched_keywords: Vec<String>,
-        suggestion: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        suggestion: Option<String>,
     },
 }
 
@@ -78,6 +80,8 @@ pub struct KeywordsConfig {
     #[schemars(range(min = 0.0, max = 1.0))]
     #[serde(default = "min_score")]
     min_score: f64,
+    /// Suggestion on nothing found
+    suggestion: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -103,6 +107,8 @@ pub struct DirectoryConfig {
     #[schemars(range(min = 0.0, max = 1.0))]
     #[serde(default = "min_score")]
     min_score: f64,
+    /// Suggestion on nothing found
+    suggestion: Option<String>,
 }
 
 /// Plugin configuration structure
@@ -226,7 +232,7 @@ fn handle_get_link(args: &Value) -> Result<Value, String> {
     } else {
         LinkResponse::NoMatch {
             searched_keywords: keywords.iter().map(|s| s.to_string()).collect(),
-            suggestion: "Try searching for broader terms like 'security' or 'api'.".into(),
+            suggestion: dir_config.suggestion.clone(),
         }
     };
 
@@ -304,7 +310,7 @@ fn handle_get_morsel(args: &Value) -> Result<Value, String> {
     } else {
         MorselResponse::NoMatch {
             searched_keywords: keywords.iter().map(|s| s.to_string()).collect(),
-            suggestion: "Try searching for broader terms like 'security' or 'api'.".into(),
+            suggestion: kwd_config.suggestion.clone(),
         }
     };
 
