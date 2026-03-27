@@ -6,7 +6,7 @@
 # Test 1: Configuration via initialize.experimental
 RUST_LOG=debug
 # Path to your MCP Server executable
-MCP_SERVER="../../mcp/target/release/mcp-server-stdio"
+MCP_SERVER="../../cvz-mcp/target/release/mcp-server-stdio"
 
 $MCP_SERVER --get-plugin-schema --plugin target/release/libplug_keywords.so | jq
 
