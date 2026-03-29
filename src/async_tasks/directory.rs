@@ -8,7 +8,6 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use url::Url;
 
-#[derive(Debug)]
 pub struct DirectoryInfo {
     pub origin: Url,
     pub trigrams: Trigrams<DirectoryEntry>,
@@ -102,7 +101,7 @@ pub async fn init_directory(config: &PluginConfig) -> anyhow::Result<bool> {
         trigrams: trigrams,
     });
 
-    debug!("init_directory info:  {:?}", directory_info);
+    debug!("init_directory info:  {:?}", directory_info.origin);
     let mut guard = DIRECTORY_INFO.write().map_err(|e| anyhow!(e.to_string()))?;
     *guard = Some(directory_info);
     Ok(true)

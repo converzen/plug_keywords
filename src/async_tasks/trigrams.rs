@@ -7,7 +7,6 @@ pub trait Named {
     fn names(&self) -> &[String];
 }
 
-#[derive(Debug)]
 pub struct Trigrams<T: Named + Clone + Serialize> {
     item_map: HashMap<String, T>,
     trigrams: Vec<(String, HashSet<String>)>,
