@@ -775,13 +775,12 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "mcp-plugin-api"
-version = "0.2.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eff3be1098fbbbd9631b57e85b8aedf0e2ff356df0127565da40ad2bd5a0a02"
+checksum = "df4a38a3866079f0aae7926e452add8a8c2fa2c967cff6ce34d12359af3f416e"
 dependencies = [
- "once_cell",
+ "regex",
  "schemars",
- "serde",
  "serde_json",
 ]
 
